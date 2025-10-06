@@ -74,11 +74,11 @@
                 </li>
                 <li class="xn-profile">
                     <a href="#" class="profile-mini">
-                        <img src="assets/images/users/avatar.jpg" alt="John Doe" />
+                        <img src="assets/images/users/avatar.png" alt="John Doe" />
                     </a>
                     <div class="profile">
                         <div class="profile-image">
-                            <img src="assets/images/users/avatar.jpg" alt="John Doe" />
+                            <img src="assets/images/users/avatar.png" alt="John Doe" />
                         </div>
                         <div class="profile-data">
                             <div class="profile-data-name" id="div_username" runat="server">Sadali Perera</div>
@@ -658,7 +658,7 @@
             endpoints: {
                 employees: '/employees',
                 search: '/employees/search',
-                validateToken: '/auth/validate-token',
+                validateToken: '/auth/validatetoken',
                 masters: {
                     companies: '/masters/companies',
                     designations: '/masters/designations',
@@ -667,6 +667,26 @@
                 }
             }
         };
+        function fetchCompanySettings(token) {
+           
+            // Otherwise fetch from user-settings endpoint
+            $.ajax({
+                url: API_CONFIG.baseUrl + '/home/company-settings?token=' + encodeURIComponent(token),
+                type: 'GET',
+                success: function (settingsResponse) {
+                    if (settingsResponse.success) {
+
+
+                    } else {
+                        showMessageError('Please Refresh the Page', 'Company Settings Loading error')
+                    }
+                },
+                error: function (xhr, status, error) {
+                    showMessageError('Please Refresh the Page', 'Company Settings Loading error');
+                }
+            });
+        }
+
         // ========== ADD THESE COOKIE UTILITY FUNCTIONS ==========
         function setCookie(name, value, days) {
             var expires = "";
@@ -695,7 +715,6 @@
         // ========== END COOKIE UTILITY FUNCTIONS ==========
 
         $(window).on('load', function () {
-            console.log('Window loaded completely');
             initializeApplication();
         });
 
@@ -736,14 +755,10 @@
 
             // Update last activity time
             sessionStorage.setItem('lastActivity', new Date().getTime());
-
-            console.log(`Inactivity timer reset: ${inactivityTimeout} minutes`);
         }
 
         function logoutDueToInactivity() {
             const inactivityTimeout = parseInt(sessionStorage.getItem('inactivityTimeout')) || 5;
-
-            console.log(`Logging out due to ${inactivityTimeout} minutes of inactivity`);
 
             // Store timeout for login page message
             sessionStorage.setItem('inactivityLogout', 'true');
@@ -776,19 +791,17 @@
                     // For remember me users, start fresh session (don't check last activity)
                     sessionStorage.setItem('lastActivity', new Date().getTime());
 
-                    console.log('Auto-login from Remember Me with timeout: ' + userTimeout + ' minutes');
                     validateToken(token);
                     return;
                 } else {
                     console.log('No active session found, redirecting to login');
-                    window.location.href = 'login.aspx';
+                    //  window.location.href = 'login.aspx';
                     return;
                 }
             }
 
             // For remember me users returning, always give fresh start
             if (getCookie('RememberToken')) {
-                console.log('Remember me user - starting fresh session');
                 sessionStorage.setItem('lastActivity', new Date().getTime());
                 validateToken(token);
                 return;
@@ -807,7 +820,7 @@
                     sessionStorage.setItem('inactivityLogout', 'true');
                     sessionStorage.setItem('inactivityTimeout', inactivityTimeout);
                     clearAuthData();
-                    window.location.href = 'login.aspx';
+                    //  window.location.href = 'login.aspx';
                     return;
                 }
             }
@@ -816,57 +829,51 @@
         }
 
         function validateToken(token) {
-            console.log('Validating token...');
-
             $.ajax({
-                url: 'https://localhost:44341/api/auth/validate-token',
+                url: 'https://localhost:44341/api/auth/validatetoken',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({ token: token }),
                 success: function (response) {
                     if (response && response.valid) {
-                        console.log('Token valid, loading dashboard...');
                         loadDashboard();
+                        fetchCompanySettings(token);
                     } else {
                         console.log('Token invalid, redirecting to login');
                         clearAuthData();
-                        window.location.href = 'login.aspx';
+                        //  window.location.href = 'login.aspx';
                     }
                 },
                 error: function (xhr, status, error) {
                     console.log('Token validation error:', error);
                     clearAuthData();
-                    window.location.href = 'login.aspx';
+                    //   window.location.href = 'login.aspx';
                 }
             });
         }
 
         function loadDashboard() {
-            console.log('Loading dashboard data...');
-
-            // Get username from sessionStorage or cookie
             var userName = sessionStorage.getItem('UserID') || getCookie('RememberUser') || 'User';
             $('#div_username').text(userName);
 
             // Get and display user's inactivity timeout
             var inactivityTimeout = parseInt(sessionStorage.getItem('inactivityTimeout')) || 5;
-            console.log(`User inactivity timeout: ${inactivityTimeout} minutes`);
 
             // Reset inactivity timer when dashboard loads
             resetInactivityTimer();
 
             // Your existing dashboard loading functions
-            myMethod();
-            myMethod2();
-            myMethod3();
-            myMethod4();
-            myMethod5();
+            //myMethod();
+            //myMethod2();
+            //myMethod3();
+            //myMethod4();
+            //myMethod5();
 
-            setInterval(myMethod, 5000);
-            setInterval(myMethod2, 5000);
-            setInterval(myMethod3, 1000);
-            setInterval(myMethod4, 1000);
-            setInterval(myMethod5, 1000);
+            //setInterval(myMethod, 5000);
+            //setInterval(myMethod2, 5000);
+            //setInterval(myMethod3, 1000);
+            //setInterval(myMethod4, 1000);
+            //setInterval(myMethod5, 1000);
         }
 
         function performLogout() {
@@ -874,8 +881,6 @@
             if (inactivityTimer) {
                 clearTimeout(inactivityTimer);
             }
-
-            console.log('Logging out...');
             $('#loading').removeClass('hidden');
 
             var token = sessionStorage.getItem('AuthToken') || getCookie('RememberToken');
@@ -913,16 +918,16 @@
                     data: JSON.stringify({ token: token }),
                     complete: function () {
                         clearAuthData();
-                        window.location.href = 'login.aspx';
+                        //  window.location.href = 'login.aspx';
                     },
                     error: function () {
                         clearAuthData();
-                        window.location.href = 'login.aspx';
+                        //       window.location.href = 'login.aspx';
                     }
                 });
             } else {
                 clearAuthData();
-                window.location.href = 'login.aspx';
+                //  window.location.href = 'login.aspx';
             }
         }
 

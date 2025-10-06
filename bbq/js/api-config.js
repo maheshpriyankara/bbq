@@ -4,7 +4,7 @@ const API_CONFIG = {
     endpoints: {
         employees: '/employees',
         search: '/employees/search',
-        validateToken: '/auth/validate-token',
+        validateToken: '/auth/validatetoken',
         masters: {
             companies: '/masters/companies',
             designations: '/masters/designations',

@@ -60,6 +60,15 @@ namespace bbq
         protected global::System.Web.UI.HtmlControls.HtmlInputText text_firstName;
 
         /// <summary>
+        /// text_nic control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.HtmlControls.HtmlInputText text_nic;
+
+        /// <summary>
         /// date_DOB control.
         /// </summary>
         /// <remarks>
@@ -76,15 +85,6 @@ namespace bbq
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.HtmlControls.HtmlSelect list_gender;
-
-        /// <summary>
-        /// text_nic control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.HtmlControls.HtmlInputText text_nic;
 
         /// <summary>
         /// list_maritalStatus control.

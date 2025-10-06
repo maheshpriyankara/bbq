@@ -1,7 +1,6 @@
 ﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="profile_employee.aspx.cs" MaintainScrollPositionOnPostback="true" Inherits="bbq.profile_employee" EnableEventValidation="false" %>
 
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
     <title>HRIS - Employee Profile</title>
@@ -35,6 +34,11 @@
             min-width: 300px;
             border-left: 5px solid #dc3545;
             animation: popupFadeIn 0.3s ease-out;
+        }
+
+        .error-field {
+            border: 2px solid #ff0000 !important;
+            background-color: #ffe6e6 !important;
         }
 
         .error-popup-content {
@@ -72,6 +76,7 @@
         .error-popup.fade-out {
             animation: popupFadeOut 0.3s ease-in forwards;
         }
+
         /* Success Popup Styles */
         .success-popup {
             position: fixed;
@@ -240,16 +245,16 @@
             }
     </style>
 
-    <script>
-
+    <script type="text/javascript">
         document.addEventListener("keydown", function (event) {
             if (event.key === "Enter") {
                 event.preventDefault();
             }
         });
+
         let inactivityTimer;
 
-        // ========== ADD THESE COOKIE UTILITY FUNCTIONS ==========
+        // ========== COOKIE UTILITY FUNCTIONS ==========
         function setCookie(name, value, days) {
             var expires = "";
             if (days) {
@@ -277,19 +282,16 @@
         // ========== END COOKIE UTILITY FUNCTIONS ==========
 
         $(window).on('load', function () {
-            console.log('Window loaded completely');
             initializeApplication();
 
             $("#text_firstName_").on('input propertychange', function () {
                 updateSystemName();
             });
 
-            // Update system name when typing in last name
             $("#text_LastName").on('input propertychange', function () {
                 updateSystemName();
             });
 
-            // Optional: Also update on blur (when user leaves the field)
             $("#text_firstName_, #text_LastName").on('blur', function () {
                 updateSystemName();
             });
@@ -297,6 +299,22 @@
             $("#text_nic").on('input propertychange', function () {
                 nicExtract();
             });
+            $("#text_firstName_").on('input', function () {
+                if ($(this).val().trim() !== '') {
+                    $(this).removeClass('error-field');
+                }
+            });
+            $("#text_LastName").on('input', function () {
+                if ($(this).val().trim() !== '') {
+                    $(this).removeClass('error-field');
+                }
+            });
+            $("#text_firstName").on('input', function () {
+                if ($(this).val().trim() !== '') {
+                    $(this).removeClass('error-field');
+                }
+            });
+
         });
 
         function initializeApplication() {
@@ -306,23 +324,18 @@
         }
 
         function setupInactivityTimer() {
-            // Reset timer on any user activity
             const events = ['mousemove', 'keypress', 'click', 'scroll', 'touchstart', 'mousedown'];
-
             events.forEach(event => {
                 document.addEventListener(event, resetInactivityTimer, true);
             });
-
             resetInactivityTimer();
         }
 
         function resetInactivityTimer() {
-            // Clear existing timer
             if (inactivityTimer) {
                 clearTimeout(inactivityTimer);
             }
 
-            // Get timeout from database (via sessionStorage or cookie)
             let inactivityTimeout = parseInt(sessionStorage.getItem('inactivityTimeout'));
             if (!inactivityTimeout) {
                 inactivityTimeout = parseInt(getCookie('UserInactivityTimeout')) || 5;
@@ -330,41 +343,27 @@
             }
 
             const timeoutMs = inactivityTimeout * 60 * 1000;
-
-            // Set new timer with database-driven timeout
             inactivityTimer = setTimeout(logoutDueToInactivity, timeoutMs);
-
-            // Update last activity time
             sessionStorage.setItem('lastActivity', new Date().getTime());
-
-            console.log(`Inactivity timer reset: ${inactivityTimeout} minutes`);
         }
 
         function logoutDueToInactivity() {
             const inactivityTimeout = parseInt(sessionStorage.getItem('inactivityTimeout')) || 5;
 
-            console.log(`Logging out due to ${inactivityTimeout} minutes of inactivity`);
-
-            // Store timeout for login page message
             sessionStorage.setItem('inactivityLogout', 'true');
             sessionStorage.setItem('inactivityTimeout', inactivityTimeout);
 
-            // Show logout message
             alert(`You have been logged out due to ${inactivityTimeout} minutes of inactivity.`);
-
             performAutoLogout();
         }
 
         function checkAuthentication() {
-            // Check session storage first
             var token = sessionStorage.getItem('AuthToken');
             var lastActivity = sessionStorage.getItem('lastActivity');
 
-            // If no session token, check remember me cookies
             if (!token) {
                 token = getCookie('RememberToken');
                 if (token) {
-                    // Recreate session from remember me
                     var userID = getCookie('RememberUser');
                     var userTimeout = parseInt(getCookie('UserInactivityTimeout')) || 5;
 
@@ -372,11 +371,7 @@
                     sessionStorage.setItem('UserID', userID);
                     sessionStorage.setItem('LoginTime', new Date().getTime());
                     sessionStorage.setItem('inactivityTimeout', userTimeout);
-
-                    // For remember me users, start fresh session (don't check last activity)
                     sessionStorage.setItem('lastActivity', new Date().getTime());
-
-                    console.log('Auto-login from Remember Me with timeout: ' + userTimeout + ' minutes');
                     validateToken(token);
                     return;
                 } else {
@@ -386,15 +381,12 @@
                 }
             }
 
-            // For remember me users returning, always give fresh start
             if (getCookie('RememberToken')) {
-                console.log('Remember me user - starting fresh session');
                 sessionStorage.setItem('lastActivity', new Date().getTime());
                 validateToken(token);
                 return;
             }
 
-            // Regular users: Check inactivity
             var inactivityTimeout = parseInt(sessionStorage.getItem('inactivityTimeout')) || 5;
 
             if (lastActivity) {
@@ -403,7 +395,6 @@
                 const timeoutMs = inactivityTimeout * 60 * 1000;
 
                 if (timeSinceLastActivity > timeoutMs) {
-                    console.log(`Session expired due to ${inactivityTimeout} minutes of inactivity`);
                     sessionStorage.setItem('inactivityLogout', 'true');
                     sessionStorage.setItem('inactivityTimeout', inactivityTimeout);
                     clearAuthData();
@@ -416,17 +407,15 @@
         }
 
         function validateToken(token) {
-            console.log('Validating token...');
-
             $.ajax({
-                url: 'https://localhost:44341/api/auth/validate-token',
+                url: 'https://localhost:44341/api/auth/validatetoken',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({ token: token }),
                 success: function (response) {
                     if (response && response.valid) {
-                        console.log('Token valid, loading dashboard...');
                         loadDashboard();
+                        fetchCompanySettings(token);
                     } else {
                         console.log('Token invalid, redirecting to login');
                         clearAuthData();
@@ -440,32 +429,53 @@
                 }
             });
         }
+        function fetchCompanySettings(token) {
+
+            // Otherwise fetch from user-settings endpoint
+            $.ajax({
+                url: API_CONFIG.baseUrl + '/home/company-settings?token=' + encodeURIComponent(token),
+                type: 'GET',
+                success: function (settingsResponse) {
+                    console.log("Complete API response:", settingsResponse);
+                    if (settingsResponse.success) {
+                       
+                        $('#<%= list_company.ClientID %>').empty();
+
+                        // Loop through the company data and add each to the dropdown
+                        $.each(settingsResponse.data, function (index, company) {
+
+                            alert(company.CompanyId);
+                            // Create a new option element using the company name and ID
+                            $('#<%= list_company.ClientID %>').append($('<option>', {
+                        value: company.CompanyId,        // The value that will be used server-side
+                        text: company.CompanyName // The text displayed to the user
+                    }));
+                });
+                    } else {
+                        showMessageError('Please Refresh the Page', 'Company Settings Loading error')
+                    }
+                },
+                error: function (xhr, status, error) {
+                    showMessageError('Please Refresh the Page', 'Company Settings Loading error');
+                }
+            });
+        }
 
         function loadDashboard() {
-            console.log('Loading dashboard data...');
-
-            // Get username from sessionStorage or cookie
             var userName = sessionStorage.getItem('UserID') || getCookie('RememberUser') || 'User';
             $('#div_username').text(userName);
 
-            // Get and display user's inactivity timeout
             var inactivityTimeout = parseInt(sessionStorage.getItem('inactivityTimeout')) || 5;
-            console.log(`User inactivity timeout: ${inactivityTimeout} minutes`);
 
-            // Reset inactivity timer when dashboard loads
             resetInactivityTimer();
-            initializeApplication();
             setupEventHandlers();
-
         }
 
         function performLogout() {
-            // Clear the inactivity timer when user manually logs out
             if (inactivityTimer) {
                 clearTimeout(inactivityTimer);
             }
 
-            console.log('Logging out...');
             $('#loading').removeClass('hidden');
 
             var token = sessionStorage.getItem('AuthToken') || getCookie('RememberToken');
@@ -495,7 +505,6 @@
             var token = sessionStorage.getItem('AuthToken') || getCookie('RememberToken');
 
             if (token) {
-                // Silent logout - don't show loading indicator
                 $.ajax({
                     url: 'https://localhost:44341/api/auth/logout',
                     type: 'POST',
@@ -525,7 +534,7 @@
             sessionStorage.removeItem('inactivityTimeout');
             sessionStorage.removeItem('inactivityLogout');
 
-            // Clear cookies (including Remember me cookies on explicit logout)
+            // Clear cookies
             deleteCookie('AuthToken');
             deleteCookie('UserID');
             deleteCookie('UserName');
@@ -540,7 +549,6 @@
         }
 
         function setupEventHandlers() {
-            // Search functionality
             $("#text_employee").autocomplete({
                 source: function (request, response) {
                     searchEmployees(request.term, response);
@@ -550,14 +558,12 @@
                 }
             });
 
-            // Button handlers
             $("#btn_loadEmployee").click(loadEmployeeByEPF);
             $("#btn_clear").click(clearForm);
 
             $(".btn-save").off('click.save').on('click.save', saveEmployeeData);
             $(".btn-delete").off('click.delete').on('click.delete', deleteEmployee);
 
-            // Tab change handlers
             $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
                 var target = $(e.target).attr("href");
                 if (target === "#tab-five" || target === "#tab-six") {
@@ -716,17 +722,29 @@
         }
 
         function saveEmployeeData() {
-            // alert('hi');
+            if ($("#text_firstName_").val().trim() == '') {
+                showMessageError('Please Input First name', 'Employee Save not Sucessfull');
+                $("#text_firstName_").addClass('error-field').focus().select();
+                return false;
+            }
+            if ($("#text_firstName").val().trim() == '') {
+                showMessageError('Please Input FUll Name', 'Employee Save not Sucessfull');
+                $("#text_firstName").addClass('error-field').focus().select();
+                return false;
+            }
+            if ($("#text_LastName").val().trim() == '') {
+                showMessageError('Please Input Last Name', 'Employee Save not Sucessfull');
+                $("#text_LastName").addClass('error-field').focus().select();
+                return false;
+            }
             var saveButton = $(".btn-save");
 
-            // Disable button immediately to prevent multiple clicks
             saveButton.prop('disabled', true);
             saveButton.text('Saving...');
 
             var employeeData = collectFormData();
             var token = sessionStorage.getItem('AuthToken') || getCookie('RememberToken');
 
-            console.log('Sending employee data:', employeeData);
             showLoading();
 
             $.ajax({
@@ -755,30 +773,27 @@
                 },
                 complete: function () {
                     hideLoading();
-                    // Re-enable button after request completes
                     saveButton.prop('disabled', false);
                     saveButton.text('Save Changes');
                 }
             });
         }
+
+
         function collectFormData() {
-            // Helper function to handle empty date values
             const handleDateValue = (dateValue) => {
                 return dateValue && dateValue.trim() !== '' ? dateValue : null;
             };
 
-            // Helper function to handle empty numeric values
             const handleNumericValue = (numValue) => {
                 const parsed = parseFloat(numValue);
                 return !isNaN(parsed) ? parsed : 0;
             };
 
-            // FIXED: Handle empty string values - return empty string instead of null
             const handleStringValue = (strValue) => {
                 return strValue && strValue.trim() !== '' ? strValue.trim() : '';
             };
 
-            // FIXED: Handle dropdown/select values with defaults
             const handleSelectValue = (selectValue, defaultValue = '') => {
                 return selectValue && selectValue !== '' ? selectValue : defaultValue;
             };
@@ -787,9 +802,9 @@
                 // Personal Data
                 title: handleSelectValue($("#list_title").val()),
                 initial: handleStringValue($("#text_initial").val()),
-                firstName: handleStringValue($("#text_firstName_").val()) || 'Unknown',
-                lastName: handleStringValue($("#text_LastName").val()) || 'Unknown',
-                systemName: handleStringValue($("#text_firstName").val()) || 'Unknown',
+                firstName: handleStringValue($("#text_firstName_").val()) || '',
+                lastName: handleStringValue($("#text_LastName").val()) || '',
+                systemName: handleStringValue($("#text_firstName").val()) || '',
                 dob: handleDateValue($("#date_DOB").val()),
                 gender: handleSelectValue($("#list_gender").val(), 'Other'),
                 nic: handleStringValue($("#text_nic").val()),
@@ -817,7 +832,7 @@
                 attendanceId: handleStringValue($("#text_attendanceID").val()),
                 epfPay: $("#check_epfPay").is(':checked'),
                 epfNo: handleStringValue($("#text_epfNo").val()) || '000',
-                EmployeeNo: handleStringValue($("#text_epfNo").val()) || 'EPF000',// Default EPF number
+                EmployeeNo: handleStringValue($("#text_epfNo").val()) || 'EPF000',
                 resigned: $("#check_resgined").is(':checked'),
                 resignedDate: handleDateValue($("#date_resginedDate").val()),
                 blockAttendance: $("#check_blocked").is(':checked'),
@@ -833,7 +848,7 @@
                 fuelAllowance: handleNumericValue($("#text_fuelAllowances").val()),
                 allowance2: handleNumericValue($("#text_allowances2").val()),
 
-                // Bank Details - FIXED: Ensure no null values
+                // Bank Details
                 paymentMethod: $("#radio_bankPay").is(':checked') ? 'Bank' : 'Cash',
                 accountNo: handleStringValue($("#text_AccountNo").val()),
                 bankCode: handleStringValue($("#text_bankCode").val()),
@@ -864,6 +879,7 @@
                 emergencyContactRelationship: handleStringValue($("#text_emRelationship").val())
             };
         }
+
         function deleteEmployee() {
             var epfNo = $("#text_epfNoSearch").val().trim();
             if (!epfNo) {
@@ -990,55 +1006,31 @@
             }, 5000);
         }
 
-        // Utility functions
-        function getCookie(name) {
-            var nameEQ = name + "=";
-            var ca = document.cookie.split(';');
-            for (var i = 0; i < ca.length; i++) {
-                var c = ca[i];
-                while (c.charAt(0) == ' ') c = c.substring(1, c.length);
-                if (c.indexOf(nameEQ) == 0) return decodeURIComponent(c.substring(nameEQ.length, c.length));
-            }
-            return null;
-        }
-
-        function clearAuthData() {
-            sessionStorage.clear();
-            document.cookie.split(";").forEach(function (c) {
-                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-            });
-        }
-
         function showMessageSuccess(message, title = "Success!") {
-            // Create overlay
             const overlay = document.createElement('div');
             overlay.className = 'popup-overlay';
 
-            // Create popup
             const popup = document.createElement('div');
             popup.className = 'success-popup';
 
             popup.innerHTML = `
-        <div class="success-popup-content">
-            <div class="success-icon">✓</div>
-            <h3>${title}</h3>
-            <p>${message}</p>
-            <button class="btn btn-success" onclick="closeSuccessPopup()">OK</button>
-        </div>
-    `;
+                <div class="success-popup-content">
+                    <div class="success-icon">✓</div>
+                    <h3>${title}</h3>
+                    <p>${message}</p>
+                    <button class="btn btn-success" onclick="closeSuccessPopup()">OK</button>
+                </div>
+            `;
 
-            // Add to page
             document.body.appendChild(overlay);
             document.body.appendChild(popup);
 
-            // Auto close after 3 seconds (optional)
             setTimeout(() => {
                 if (document.body.contains(popup)) {
                     closeSuccessPopup();
                 }
             }, 3000);
 
-            // Close on overlay click
             overlay.addEventListener('click', closeSuccessPopup);
         }
 
@@ -1064,39 +1056,34 @@
                 }, 300);
             }
         }
+
         function showMessageError(message, title = "Error!") {
-            // Remove any existing popups first
             closeAllPopups();
 
-            // Create overlay
             const overlay = document.createElement('div');
             overlay.className = 'popup-overlay';
 
-            // Create popup
             const popup = document.createElement('div');
             popup.className = 'error-popup';
 
             popup.innerHTML = `
-        <div class="error-popup-content">
-            <div class="error-icon">✕</div>
-            <h3>${title}</h3>
-            <p>${message}</p>
-            <button class="btn btn-danger" onclick="closeErrorPopup()">OK</button>
-        </div>
-    `;
+                <div class="error-popup-content">
+                    <div class="error-icon">✕</div>
+                    <h3>${title}</h3>
+                    <p>${message}</p>
+                    <button class="btn btn-danger" onclick="closeErrorPopup()">OK</button>
+                </div>
+            `;
 
-            // Add to page
             document.body.appendChild(overlay);
             document.body.appendChild(popup);
 
-            // Auto close after 5 seconds (longer for errors)
             setTimeout(() => {
                 if (document.body.contains(popup)) {
                     closeErrorPopup();
                 }
             }, 5000);
 
-            // Close on overlay click
             overlay.addEventListener('click', closeErrorPopup);
         }
 
@@ -1123,7 +1110,6 @@
             }
         }
 
-        // Utility function to close all popups
         function closeAllPopups() {
             const successPopup = document.querySelector('.success-popup');
             const errorPopup = document.querySelector('.error-popup');
@@ -1137,78 +1123,39 @@
         function updateSystemName() {
             const firstName = $("#text_firstName_").val().trim();
             const lastName = $("#text_LastName").val().trim();
-
-            // Combine first and last name with a space
             const systemName = `${firstName} ${lastName}`.trim();
-
-            // Update the system name field
             $("#text_firstName").val(systemName);
         }
-
-
 
         // NIC to Other Extract
         var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         var totalDates = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
         function nicExtract() {
-            
             const idNumber = $("#text_nic").val().trim();
 
-            //Check the 3 digits for use month & day
+            // Check the 3 digits for use month & day
             var checkThreeOld = idNumber.substring(2, 5);
             var checkThreeNew = idNumber.substring(4, 7);
 
-            //Check the last digit of the OLD NIC
+            // Check the last digit of the OLD NIC
             var checkV = idNumber.endsWith('V');
             var checkv = idNumber.endsWith('v');
 
-            //Check the first digit of the NEW NIC
+            // Check the first digit of the NEW NIC
             var checkOne = idNumber.startsWith('1');
-            var checkTow = idNumber.startsWith('2');
+            var checkTwo = idNumber.startsWith('2');
 
-
-            //Validation start here
+            // Validation start here
             if (idNumber.length == 10 && (checkV == true || checkv == true) && (checkThreeOld <= 366 || (checkThreeOld >= 501 && checkThreeOld <= 866))) {
                 oldNIC(idNumber);
-            } else if (idNumber.length == 12 && (checkOne == true || checkTow == true) && (checkThreeNew <= 366 || (checkThreeNew >= 501 && checkThreeNew <= 866))) {
+            } else if (idNumber.length == 12 && (checkOne == true || checkTwo == true) && (checkThreeNew <= 366 || (checkThreeNew >= 501 && checkThreeNew <= 866))) {
                 newNIC(idNumber);
             } else {
                 return;
             }
-
         }
-        function oldNIC(idNumber) {
-            if (!idNumber || idNumber.length < 10) return;
 
-            try {
-                const twoDigitYear = idNumber.substring(0, 2);
-                const year = "19" + twoDigitYear;
-                let dayOfYear = parseInt(idNumber.substring(2, 5));
-
-                if (dayOfYear > 500) dayOfYear -= 500;
-                const adjustedDayOfYear = dayOfYear - 1;
-                const monthDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-
-                let dayCount = adjustedDayOfYear;
-                let month = 0;
-
-                for (let i = 0; i < monthDays.length; i++) {
-                    if (dayCount <= monthDays[i]) {
-                        month = i;
-                        break;
-                    }
-                    dayCount -= monthDays[i];
-                }
-
-                const formattedMonth = (month + 1).toString().padStart(2, '0');
-                const formattedDay = dayCount.toString().padStart(2, '0');
-                $("#date_DOB").val(`${year}-${formattedMonth}-${formattedDay}`);
-                $("#list_gender").val(`${gender}`);
-
-            } catch (error) {
-            }
-        }
         function newNIC(idNumber) {
             if (!idNumber || idNumber.length < 12) {
                 console.error('Invalid NIC number');
@@ -1219,24 +1166,31 @@
                 var year = idNumber.substring(0, 4);
                 var currentYear = new Date().getFullYear();
                 if (parseInt(year) < 1900 || parseInt(year) > currentYear) {
+                    console.error('Invalid year in NIC');
                     return;
                 }
+
                 var dayOfYear = parseInt(idNumber.substring(4, 7));
                 if (dayOfYear < 1 || dayOfYear > 866) {
+                    console.error('Invalid day number in NIC');
                     return;
                 }
+
                 var gender = "Male";
                 if (dayOfYear > 500) {
                     dayOfYear -= 500;
                     gender = "Female";
                 }
                 const adjustedDayOfYear = dayOfYear - 1;
+
                 const months = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
                 const monthDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
                 var isLeapYear = (parseInt(year) % 4 === 0 && parseInt(year) % 100 !== 0) || (parseInt(year) % 400 === 0);
                 if (isLeapYear) {
                     monthDays[1] = 29;
                 }
+
                 let dayCount = adjustedDayOfYear;
                 let month = 0;
 
@@ -1253,12 +1207,53 @@
                 $("#date_DOB").val(`${year}-${formattedMonth}-${formattedDay}`);
                 $("#list_gender").val(`${gender}`);
 
+
             } catch (error) {
+                console.error('Error processing NIC:', error);
             }
         }
+
+        function oldNIC(idNumber) {
+            if (!idNumber || idNumber.length < 10) return;
+
+            try {
+                const twoDigitYear = idNumber.substring(0, 2);
+                const year = "19" + twoDigitYear;
+                let dayOfYear = parseInt(idNumber.substring(2, 5));
+
+                var gender = "Male";
+                if (dayOfYear > 500) {
+                    dayOfYear -= 500;
+                    gender = "Female";
+                }
+                const adjustedDayOfYear = dayOfYear - 1;
+
+                const monthDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+                let dayCount = adjustedDayOfYear;
+                let month = 0;
+
+                for (let i = 0; i < monthDays.length; i++) {
+                    if (dayCount <= monthDays[i]) {
+                        month = i;
+                        break;
+                    }
+                    dayCount -= monthDays[i];
+                }
+
+                const formattedMonth = (month + 1).toString().padStart(2, '0');
+                const formattedDay = dayCount.toString().padStart(2, '0');
+                $("#date_DOB").val(`${year}-${formattedMonth}-${formattedDay}`);
+                alert(gender);
+                $("#list_gender").val(`${gender}`);
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+
     </script>
 </head>
-
 <body runat="server">
     <form runat="server">
         <!-- Loading indicator -->
@@ -1282,11 +1277,11 @@
                     </li>
                     <li class="xn-profile">
                         <a href="#" class="profile-mini">
-                            <img src="assets/images/users/avatar.jpg" alt="John Doe" />
+                            <img src="assets/images/users/avatar.png" alt="John Doe" />
                         </a>
                         <div class="profile">
                             <div class="profile-image">
-                                <img src="assets/images/users/avatar.jpg" alt="John Doe" />
+                                <img src="assets/images/users/avatar.png" alt="John Doe" />
                             </div>
                             <div class="profile-data">
                                 <div class="profile-data-name" id="div_username"></div>
@@ -1465,50 +1460,65 @@
                                                         </div>
                                                     </div>
                                                     <div class="form-group">
-                                                        <label class="col-md-3 col-xs-12 control-label">First Name</label>
+                                                        <label class="col-md-3 col-xs-12 control-label">First Name *</label>
                                                         <div class="col-md-6 col-xs-12">
                                                             <input type="text" class="form-control" value="" id="text_firstName_" runat="server" />
                                                         </div>
                                                     </div>
                                                     <div class="form-group">
-                                                        <label class="col-md-3 col-xs-12 control-label">Last Name</label>
+                                                        <label class="col-md-3 col-xs-12 control-label">Last Name *</label>
                                                         <div class="col-md-6 col-xs-12">
                                                             <input type="text" class="form-control" value="" id="text_LastName" runat="server" />
                                                         </div>
                                                     </div>
 
                                                     <div class="form-group">
-                                                        <label class="col-md-3 col-xs-12 control-label">System Name </label>
+                                                        <label class="col-md-3 col-xs-12 control-label">System Name *</label>
                                                         <div class="col-md-6 col-xs-12">
                                                             <input type="text" class="form-control" value="" id="text_firstName" runat="server" />
                                                         </div>
                                                     </div>
                                                     <div class="form-group">
-                                                        <label class="col-md-3 control-label">DOB *</label>
+                                                        <label class="col-md-3 col-xs-12 control-label">NIC</label>
+                                                        <div class="col-md-6 col-xs-12">
+                                                            <input type="text" class="form-control" value="" id="text_nic" runat="server" />
+                                                        </div>
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label class="col-md-3 control-label">DOB</label>
                                                         <div class="col-md-3">
 
                                                             <asp:TextBox ID="date_DOB" CssClass="form-control" runat="server" TextMode="Date"></asp:TextBox>
                                                         </div>
                                                     </div>
                                                     <div class="form-group">
-                                                        <label class="col-md-3 col-xs-12 control-label">Gender *</label>
-                                                        <div class="col-md-2">
+                                                        <label class="col-md-3 col-xs-12 control-label">Gender</label>
+                                                        <div class="col-md-4">
                                                             <select class="form-control" id="list_gender" runat="server">
                                                                 <option></option>
                                                                 <option>Male</option>
                                                                 <option>FeMale</option>
                                                                 <option>Other</option>
+                                                                <option value="male">Male</option>
+                                                                <option value="female">Female</option>
+                                                                <option value="transgender-male">Transgender Male</option>
+                                                                <option value="transgender-female">Transgender Female</option>
+                                                                <option value="non-binary">Non-Binary</option>
+                                                                <option value="genderqueer">Genderqueer</option>
+                                                                <option value="genderfluid">Genderfluid</option>
+                                                                <option value="agender">Agender</option>
+                                                                <option value="bigender">Bigender</option>
+                                                                <option value="pangender">Pangender</option>
+                                                                <option value="two-spirit">Two-Spirit</option>
+                                                                <option value="intersex">Intersex</option>
+                                                                <option value="other">Other</option>
+                                                                <option value="prefer-not-to-say">Prefer not to say</option>
 
                                                             </select>
                                                         </div>
 
                                                     </div>
-                                                    <div class="form-group">
-                                                        <label class="col-md-3 col-xs-12 control-label">NIC *</label>
-                                                        <div class="col-md-6 col-xs-12">
-                                                            <input type="text" class="form-control" value="" id="text_nic" runat="server" />
-                                                        </div>
-                                                    </div>
+
                                                 </div>
                                                 <div class="col-md-6">
 
@@ -2185,7 +2195,7 @@
                                                             <div class="timeline-item-icon"><span class="fa fa-globe"></span></div>
                                                             <div class="timeline-item-content">
                                                                 <div class="timeline-heading">
-                                                                    <img src="assets/images/users/leesons.png" />
+                                                                    <img src="assets/images/users/avatar.png" />
                                                                     <a href="#">HR Executive</a> at <a href="#">Leesons Hospital PVT Ltd</a>
                                                                 </div>
                                                                 <div class="timeline-body">
@@ -2298,6 +2308,7 @@
 
                                 </div>
                             </panel>
+
                         </div>
                     </div>
                     <!-- Only change the Save buttons to use the new API -->
@@ -2330,25 +2341,8 @@
         </div>
     </div>
 
-    <script>
-        function performLogout() {
-            var token = sessionStorage.getItem('AuthToken') || getCookie('RememberToken');
-            if (token) {
-                $.ajax({
-                    url: API_CONFIG.baseUrl + '/auth/logout',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ token: token }),
-                    complete: function () {
-                        clearAuthData();
-                        window.location.href = 'login.aspx';
-                    }
-                });
-            } else {
-                clearAuthData();
-                window.location.href = 'login.aspx';
-            }
-        }
+    <script type="text/javascript">
+
 
         // Set username from session
         $(document).ready(function () {
@@ -2388,3 +2382,4 @@
     <script type="text/javascript" src="js/actions.js"></script>
 </body>
 </html>
+
